@@ -1,26 +1,28 @@
 # omarchy-magic-trackpad
 
-Two-finger horizontal swipe navigation for Omarchy on Hyprland, packaged as a small `libinput-gestures` configuration.
+A prototype for horizontal back/forward navigation on Omarchy with Hyprland. Its current `libinput-gestures` rules are experimental: standard libinput reports two-finger movement as scrolling, not swipe events, so they do not implement two-finger back/forward yet.
 
-## Current prototype
+## Prototype status and gesture limitation
 
-- Two-finger swipe **left** sends `Alt+Left` (Back) to the focused window.
-- Two-finger swipe **right** sends `Alt+Right` (Forward) to the focused window.
-- Hyprland's `sendshortcut` dispatcher targets the active window, including native Wayland clients; it does not synthesize a system-wide key event.
-- Gestures are restricted to exactly two fingers.
+The config currently contains the requested mapping:
 
-These are common shortcuts, not a guarantee that every application uses them. Chromium supports them; file managers and other apps vary. If an app uses different shortcuts, adjust the two command lines in `libinput-gestures.conf` for that app's behavior (the current config uses one mapping for all apps).
+- Swipe left sends `Alt+Left` (Back) to the focused window.
+- Swipe right sends `Alt+Right` (Forward) to the focused window.
+
+However, this mapping is **not usable as a two-finger swipe with `libinput-gestures`**. Linux libinput reports ordinary one- and two-finger movement as pointer/scroll events; its swipe gesture events are normally generated for three or more fingers. As a result, the two-finger movement scrolls the active app instead of matching these `gesture swipe ... 2` rules. Hyprland's `sendshortcut` is only reached after a swipe event is recognized; it cannot turn a scroll event into a two-finger swipe by itself.
+
+With this approach, change the mappings to three fingers for swipe events, or use an app's own horizontal-scroll history navigation where supported. A true system-wide two-finger back/forward action requires a separate scroll-event recognizer that can distinguish a deliberate horizontal swipe from normal horizontal scrolling; this prototype does not provide that.
 
 ## Requirements
 
 - Hyprland/Omarchy with `/usr/bin/hyprctl` and a working `sendshortcut` dispatcher.
 - `libinput-gestures` and its `libinput-gestures-setup` helper.
 - Permission for the user to read the touchpad's libinput events. On Arch, this commonly means adding the user to the `input` group and logging out/in; do not run the gesture daemon as root.
-- A touchpad and driver that expose two-finger swipe gestures through libinput. Virtual touchpads may not expose physical swipe events.
+- A touchpad and driver that expose libinput swipe events. Standard libinput swipe gestures use three or more fingers; two-finger movement is normally reported as scrolling.
 
-## Gesture behavior
+## Shortcut mapping
 
-The mapping is global: a two-finger swipe left sends `Alt+Left`, and a swipe right sends `Alt+Right` to the active window. This enables each app's own Back/Forward action where it implements those shortcuts (for example, Chromium). Apps without those shortcuts will not navigate. `libinput-gestures` dispatches the event after recognizing the completed swipe; it is not a live, animated history gesture.
+The config maps a recognized left swipe to `Alt+Left` (Back) and a recognized right swipe to `Alt+Right` (Forward), sent to the active window. Apps must support those shortcuts. Note that the current `... 2` rules will not receive ordinary two-finger movement as swipe events from standard libinput, so this does not currently deliver the requested two-finger behavior.
 
 ## Install on Omarchy
 
@@ -54,4 +56,4 @@ The debug mode reports recognized gestures and configured commands; stop it with
 
 ## Development status
 
-This is an initial functional config prototype, not verified against a physical Apple Magic Trackpad. The current development environment exposes a QEMU Virtio Pinch Touchpad and does not have `libinput` or `libinput-gestures` installed, so hardware gesture detection and live shortcut delivery still need testing on the target machine.
+This prototype has not been verified with a physical Apple Magic Trackpad. The development environment exposes a QEMU Virtio Pinch Touchpad and does not have `libinput` or `libinput-gestures` installed, so physical-device event behavior and shortcut delivery remain untested here.
