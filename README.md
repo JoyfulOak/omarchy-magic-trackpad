@@ -31,12 +31,15 @@ omarchy pkg aur add libinput-gestures
 sudo gpasswd -a "$USER" input
 ```
 
-After logging back in, install and start this plugin from the cloned repository:
+After logging back in, clone the plugin from GitHub, then install and start it:
 
 ```bash
+git clone https://github.com/JoyfulOak/omarchy-magic-trackpad.git ~/omarchy_share/GitHub/omarchy-magic-trackpad
 cd ~/omarchy_share/GitHub/omarchy-magic-trackpad
 ./install.sh
 ```
+
+If you already cloned the repository, skip the `git clone` line and run the `cd` and `./install.sh` commands.
 
 The installer backs up an existing `~/.config/libinput-gestures.conf`, copies this repository's config, and asks `libinput-gestures-setup` to configure autostart and start the user daemon. Do not run the daemon as root. To remove the config and autostart, run `./uninstall.sh` (backups are retained).
 
