@@ -1,39 +1,32 @@
 # omarchy-magic-trackpad
 
-Two-finger horizontal scroll navigation for Omarchy and Hyprland. Swiping left sends `Alt+Left` to the focused window; swiping right sends `Alt+Right`. Chromium and other applications that use those shortcuts can navigate backward and forward.
+This repository investigates two-finger horizontal navigation on Omarchy with Hyprland. It does not currently provide a working system-wide solution.
 
-## Approach
+## Why the previous approach failed
 
-This uses Hyprland's built-in horizontal scroll bindings (`mouse_left` and `mouse_right`). A normal two-finger touchpad movement is reported as scroll input, not as a two-finger swipe gesture, so `libinput-gestures` swipe rules cannot recognize it. This setup uses no gesture daemon, raw input-device access, root privileges, or input-group membership.
+Hyprland's `mouse_left` and `mouse_right` binds are for horizontal mouse-wheel events. They do not receive touchpad scroll events, even though the bindings appear in `hyprctl binds`. The previous installer registered those binds and therefore reported success without making touchpad swipes work. The current `install.sh` refuses to install them.
 
-Hyprland sees horizontal scroll events rather than a distinct “history swipe” event. The bindings consume horizontal scrolling and translate each short scroll burst into one shortcut. That means apps with horizontal-scroll content will receive navigation instead while this is installed. Applications that do not use `Alt+Left`/`Alt+Right` will not navigate.
+`libinput-gestures` is not a replacement: libinput reports ordinary two-finger touchpad movement as scroll events, while its swipe gestures are for three or more fingers.
 
-## Install
+## What works without a system daemon
 
-Requirements: Omarchy with Hyprland's Lua configuration, `hyprctl`, and `luac`.
+Applications can implement navigation on their own. Chromium has the `TouchpadOverscrollHistoryNavigation` feature; it must be enabled when Chromium starts. On this machine, Chromium already uses that feature through `~/.config/chromium-flags.conf`. The feature only affects Chromium and other apps need their own native support.
 
-```sh
-cd ~/omarchy_share/Github/omarchy-magic-trackpad
-./install.sh
-hyprctl reload
-```
+There is no generic Wayland shortcut that translates two-finger scrolls to back/forward in every focused app. A global recognizer would need to read raw `/dev/input` events or run inside Hyprland as a native plugin. The event devices on this Omarchy system are restricted to the `input` group, and this user is not a member. This repo will not silently add broad input-device permissions or install compositor code.
 
-The installer validates the Lua syntax, writes one managed file under `~/.config/hypr/`, and appends one marked `dofile` line to `hyprland.lua`. It makes a timestamped backup before editing that file, refuses symlinks, and does not start services or change device permissions. If the bindings conflict with your own `mouse_left` or `mouse_right` binds, inspect and remove the conflicting bind in your own config before enabling this one.
+## Cleanup
 
-Try a two-finger swipe left and right over a window with navigation history. A left swipe should go back and a right swipe should go forward. The active Hyprland window receives the shortcut.
-
-## Uninstall
+The earlier installer from this repository added a marked loader line and a managed Hyprland Lua file. To remove those files and restore normal horizontal mouse-wheel behavior:
 
 ```sh
 ./uninstall.sh
 hyprctl reload
 ```
 
-Uninstall removes only this repo's marked loader and managed Lua file. It keeps all timestamped backups. It does not remove or alter any files from an earlier `libinput-gestures` installation; that setup is independent and must be removed using its own configuration if present.
+The uninstall script removes only this repository's marked loader and managed Lua file. Timestamped backups are kept. It does not remove unrelated `libinput-gestures` configuration or autostart files.
 
-## Limitations
+## Next steps
 
-- Horizontal scroll is used for navigation while installed, including scroll input from devices that emit horizontal wheel events.
-- `Alt+Left` and `Alt+Right` are common history shortcuts, but individual applications may use different shortcuts or no history action.
-- Hyprland binds discrete scroll events, so this produces a single navigation step per scroll burst rather than macOS-style animated history tracking.
-- This repository has not been validated on a physical Apple Magic Trackpad. The current development VM does not provide physical trackpad hardware.
+For Chromium, verify the swipe in a Wayland session and confirm the current Chromium process includes `--enable-features=TouchpadOverscrollHistoryNavigation` in `chrome://version`.
+
+For a system-wide behavior, choose between a user-space event monitor with raw input-device access and a version-matched Hyprland plugin. Both have broader system impact than this repo's original config-only prototype and need a separately reviewed implementation.
